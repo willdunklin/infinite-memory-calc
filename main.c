@@ -59,8 +59,9 @@ struct block* add(struct block* a, struct block* b) {
     if(a == NULL && b == NULL)
         return NULL;
 
+    // TODO: might not work, need to connect a to the previous block
     if(a == NULL)
-        create_block(b->val, b->exp);
+        a = create_block(b->val, b->exp);
 
     else if(b != NULL) {
         // If both have a block
@@ -99,11 +100,12 @@ struct block* mult(struct block* a, struct block* b) {
         b = b->next;
     }
 
-    a = NULL;
+    b = NULL;
     // Sum the intermediate products
     while(head = head->next) {
-        add(a, head->data);
+        b = add(head->data, b);
     }
+    a = b;
     return a;
 }
 
