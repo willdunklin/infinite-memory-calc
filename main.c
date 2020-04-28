@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <ctype.h>
+#include <string.h>
 
 // constants
 #define EOS	257
@@ -112,7 +113,7 @@ struct block* mult(struct block* a, struct block* b) {
 char* block_str(struct block* a) {
     int size = 8, i = 0;
     char* buffer = (char*)malloc(size);
-    while(a = a->next) {
+    while(a) {
         if(i >= size - 5) {
             buffer = (char*)realloc(buffer, size = size * 2);
         }
@@ -120,8 +121,12 @@ char* block_str(struct block* a) {
             buffer[i++] = (a->val % 10) + '0';
             a->val /= 10;
         }
+        a = a->next;
     }
+
     buffer[i] = '\0';
+    strrev(buffer);
+
     return buffer;
 }
 
@@ -249,7 +254,7 @@ int get_token()
                     length = i;
 
                     for(; i >= 0; --i) {
-                        fprintf(stderr, "%d %d\n", buffer[i], length - i);
+//                        fprintf(stderr, "%d %d\n", buffer[i], length - i);
 
                         place = (length - i) % 4;
                         // Flush the completed block
@@ -257,15 +262,15 @@ int get_token()
                             // The last digit in the number
                             if(i == 0) {
                                 // If the old block hasn't been flushed yet
-                                if(place == 0) {
-                                    printf("%d\n", value);
+                                if(place == 0 && length != 0) {
+//                                    printf("%d\n", value);
                                     next->next = create_block(value, ((length - i) / 4) - 1);
                                     next = next->next;
                                     value = 0;
                                 }
                                 value += buffer[i] * p10(place);
                             }
-                            printf("%d\n", value);
+//                            printf("%d\n", value);
                             next->next = create_block(value, ((length - i) / 4) - 1);
                             next = next->next;
                             value = 0;
