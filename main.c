@@ -11,7 +11,6 @@
 // Block of 4 digits
 struct block {
     struct block* next;
-    struct block* prev;
     int val;
     int exp;
 };
@@ -60,9 +59,8 @@ struct block* add(struct block** a, struct block* b) {
     if(*a == NULL && b == NULL)
         return NULL;
 
-    // TODO: might not work, need to connect a to the previous block
     if(*a == NULL)
-        *a = create_block(b->val, b->exp);
+        *a = b;
 
     else if(b != NULL) {
         // If both have a block
@@ -78,6 +76,7 @@ struct block* add(struct block** a, struct block* b) {
 struct block* mult(struct block* a, struct block* b) {
     struct list *head = (struct list*)malloc(sizeof(struct list)), *next = head;
 
+    // TODO: Works for one block but not for multiple
     while(b) {
         while(a) {
             int exp = a->exp + b->exp;
@@ -88,13 +87,13 @@ struct block* mult(struct block* a, struct block* b) {
 
             // Fill in zeros
             struct block *prev = product, *current;
-            for(; exp >= 0; --exp) {
+            for(; exp > 0; --exp) {
                 current = zero(exp);
                 prev->next = current;
                 prev = current;
             }
 
-            append(next, current);
+            append(next, product);
 
             a = a->next;
         }
@@ -111,6 +110,9 @@ struct block* mult(struct block* a, struct block* b) {
 }
 
 char* block_str(struct block* a) {
+    if(a == NULL)
+        return '\0';
+
     int size = 8, i = 0;
     char* buffer = (char*)malloc(size);
     while(a) {
@@ -158,7 +160,6 @@ int main()
     current_token = get_token();
     while ( current_token != EOS ) {
         value = expr();
-        // TODO: Make block print method
         fprintf( stderr, "\nValue = %s\n", block_str(value) );
     }
 }
@@ -171,7 +172,7 @@ struct block* expr()
         if ( current_token == '+' ) {
             match( '+' );
 
-            add(&value, term());
+            value = add(&value, term());
         }
         else break;
     }
@@ -186,7 +187,7 @@ struct block* term()
         if ( current_token == '*' ) {
             match( '*' );
 
-            mult(value, factor());
+            value = mult(value, factor());
         }
         else break;
     }
@@ -205,7 +206,6 @@ struct block* factor()
         return value;
     }
     else if ( current_token == NUM ) {
-        // TODO: Convert this here
         value = current_attribute;
         match( NUM );
         return value;
@@ -254,8 +254,6 @@ int get_token()
                     length = i;
 
                     for(; i >= 0; --i) {
-//                        fprintf(stderr, "%d %d\n", buffer[i], length - i);
-
                         place = (length - i) % 4;
                         // Flush the completed block
                         if ((place == 0 && length != i) || i == 0) {
@@ -264,14 +262,14 @@ int get_token()
                                 // If the old block hasn't been flushed yet
                                 if(place == 0 && length != 0) {
 //                                    printf("%d\n", value);
-                                    next->next = create_block(value, ((length - i) / 4) - 1);
+                                    next->next = create_block(value, ((length - i) / 4));
                                     next = next->next;
                                     value = 0;
                                 }
                                 value += buffer[i] * p10(place);
                             }
 //                            printf("%d\n", value);
-                            next->next = create_block(value, ((length - i) / 4) - 1);
+                            next->next = create_block(value, ((length - i) / 4));
                             next = next->next;
                             value = 0;
                         }
