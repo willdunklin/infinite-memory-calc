@@ -55,9 +55,9 @@ void carry(struct block** a, int value, int exp) {
 }
 
 // Add block b to a
-void add(struct block* a, struct block* b) {
+struct block* add(struct block* a, struct block* b) {
     if(a == NULL && b == NULL)
-        return;
+        return NULL;
 
     if(a == NULL)
         create_block(b->val, b->exp);
@@ -70,18 +70,41 @@ void add(struct block* a, struct block* b) {
         // Add the next blocks
         add(a->next, b->next);
     }
+    return a;
 }
 
-void mult(struct block* a, struct block* b) {
+struct block* mult(struct block* a, struct block* b) {
     struct list *head = (struct list*)malloc(sizeof(struct list)), *next = head;
 
     while(b) {
         while(a) {
+            int exp = a->exp + b->exp;
+            // Multiply the blocks
+            struct block* product = create_block(a->val * b->val, exp);
+            // Expand upward with carrying
+            carry(&product, 0, exp);
+
+            // Fill in zeros
+            struct block *prev = product, *current;
+            for(; exp >= 0; --exp) {
+                current = zero(exp);
+                prev->next = current;
+                prev = current;
+            }
+
+            append(next, current);
 
             a = a->next;
         }
         b = b->next;
     }
+
+    a = NULL;
+    // Sum the intermediate products
+    while(head = head->next) {
+        add(a, head->data);
+    }
+    return a;
 }
 
 // prototypes
