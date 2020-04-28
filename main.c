@@ -71,7 +71,7 @@ struct block* add(struct block** a, struct block* b) {
         // Add the next blocks
         add(&((*a)->next), b->next);
     }
-    return a;
+    return *a;
 }
 
 struct block* mult(struct block* a, struct block* b) {
@@ -125,6 +125,13 @@ char* block_str(struct block* a) {
     return buffer;
 }
 
+int p10(int e) {
+    int result = 1;
+    for(; e > 0; --e)
+        result *= 10;
+    return result;
+}
+
 // prototypes
 struct block* expr();
 struct block* term();
@@ -159,7 +166,7 @@ struct block* expr()
         if ( current_token == '+' ) {
             match( '+' );
 
-            add(value, term());
+            add(&value, term());
         }
         else break;
     }
@@ -217,9 +224,11 @@ void match( int expected_token )
 int get_token()
 {
     int c;		// current character from the stream
-    int value;	// value of a number
-    int i = 0;
+    int value = 0;	// value of a number
+    int i = 0, length, place;
     struct block *head = create_block(0, 0), *next = head;
+    int size = 8;
+    char* buffer = (char*)malloc(size);
 
     while (1) {
         switch ( c = getchar() ) {
@@ -229,15 +238,41 @@ int get_token()
                 continue;	// ignore spaces and tabs
             default:
                 if ( isdigit(c) ) {
-                    value = c - '0';
+                    ungetc(c, stdin);
                     while ( isdigit( c = getchar() )) {
-                        ++i;
-                        if(i % 4 == 0) {
-                            next->next = create_block(value, (i/4) - 1);
+                        if(i >= size - 1)
+                            buffer = (char*)realloc(buffer, size = size * 2);
+                        buffer[i++] = c - '0';
+                    }
+
+                    --i;
+                    length = i;
+
+                    for(; i >= 0; --i) {
+                        fprintf(stderr, "%d %d\n", buffer[i], length - i);
+
+                        place = (length - i) % 4;
+                        // Flush the completed block
+                        if ((place == 0 && length != i) || i == 0) {
+                            // The last digit in the number
+                            if(i == 0) {
+                                // If the old block hasn't been flushed yet
+                                if(place == 0) {
+                                    printf("%d\n", value);
+                                    next->next = create_block(value, ((length - i) / 4) - 1);
+                                    next = next->next;
+                                    value = 0;
+                                }
+                                value += buffer[i] * p10(place);
+                            }
+                            printf("%d\n", value);
+                            next->next = create_block(value, ((length - i) / 4) - 1);
+                            next = next->next;
                             value = 0;
                         }
-                        value = value * 10 + (c - '0');
+                        value += buffer[i] * p10(place);
                     }
+
                     ungetc( c, stdin );
                     current_attribute = head->next;
                     return NUM;
