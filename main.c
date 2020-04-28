@@ -55,21 +55,21 @@ void carry(struct block** a, int value, int exp) {
 }
 
 // Add block b to a
-struct block* add(struct block* a, struct block* b) {
-    if(a == NULL && b == NULL)
+struct block* add(struct block** a, struct block* b) {
+    if(*a == NULL && b == NULL)
         return NULL;
 
     // TODO: might not work, need to connect a to the previous block
-    if(a == NULL)
-        a = create_block(b->val, b->exp);
+    if(*a == NULL)
+        *a = create_block(b->val, b->exp);
 
     else if(b != NULL) {
         // If both have a block
-        a->val += b->val;
+        (*a)->val += b->val;
         // Carry nothing extra (handles if there's overflow)
-        carry(&a, 0, a->exp);
+        carry(a, 0, (*a)->exp);
         // Add the next blocks
-        add(a->next, b->next);
+        add(&((*a)->next), b->next);
     }
     return a;
 }
@@ -103,10 +103,26 @@ struct block* mult(struct block* a, struct block* b) {
     b = NULL;
     // Sum the intermediate products
     while(head = head->next) {
-        b = add(head->data, b);
+        b = add(&(head->data), b);
     }
     a = b;
     return a;
+}
+
+char* block_str(struct block* a) {
+    int size = 8, i = 0;
+    char* buffer = (char*)malloc(size);
+    while(a = a->next) {
+        if(i >= size - 5) {
+            buffer = (char*)realloc(buffer, size = size * 2);
+        }
+        for(int j = 0; j < 4; ++j) {
+            buffer[i++] = (a->val % 10) + '0';
+            a->val /= 10;
+        }
+    }
+    buffer[i] = '\0';
+    return buffer;
 }
 
 // prototypes
@@ -120,7 +136,7 @@ void match( int );
 
 // global communication variables
 int current_token;
-int current_attribute;
+struct block* current_attribute;
 
 /* unbounded memory calculator */
 int main()
@@ -131,7 +147,7 @@ int main()
     while ( current_token != EOS ) {
         value = expr();
         // TODO: Make block print method
-        fprintf( stderr, "\nValue = %d\n", value );
+        fprintf( stderr, "\nValue = %s\n", block_str(value) );
     }
 }
 
@@ -202,6 +218,8 @@ int get_token()
 {
     int c;		// current character from the stream
     int value;	// value of a number
+    int i = 0;
+    struct block *head = create_block(0, 0), *next = head;
 
     while (1) {
         switch ( c = getchar() ) {
@@ -213,10 +231,15 @@ int get_token()
                 if ( isdigit(c) ) {
                     value = c - '0';
                     while ( isdigit( c = getchar() )) {
+                        ++i;
+                        if(i % 4 == 0) {
+                            next->next = create_block(value, (i/4) - 1);
+                            value = 0;
+                        }
                         value = value * 10 + (c - '0');
                     }
                     ungetc( c, stdin );
-                    current_attribute = value;
+                    current_attribute = head->next;
                     return NUM;
                 }
                 else if ( c == '\n' ) {
