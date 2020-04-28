@@ -108,9 +108,9 @@ struct block* mult(struct block* a, struct block* b) {
 }
 
 // prototypes
-int expr();
-int term();
-int factor();
+struct block* expr();
+struct block* term();
+struct block* factor();
 void error( char * );
 int get_token();
 void match( int );
@@ -120,26 +120,28 @@ void match( int );
 int current_token;
 int current_attribute;
 
-/* bounded memory calculator */
+/* unbounded memory calculator */
 int main()
 {
-    int value;
+    struct block* value;
 
     current_token = get_token();
     while ( current_token != EOS ) {
         value = expr();
+        // TODO: Make block print method
         fprintf( stderr, "\nValue = %d\n", value );
     }
 }
 
 // handles addition
-int expr()
+struct block* expr()
 {
-    int value = term();
+    struct block* value = term();
     while (1) {
         if ( current_token == '+' ) {
             match( '+' );
-            value += term();
+
+            add(value, term());
         }
         else break;
     }
@@ -147,13 +149,14 @@ int expr()
 }
 
 // handles multiplication
-int term()
+struct block* term()
 {
-    int value = factor();
+    struct block* value = factor();
     while (1) {
         if ( current_token == '*' ) {
             match( '*' );
-            value *= factor();
+
+            mult(value, factor());
         }
         else break;
     }
@@ -161,9 +164,9 @@ int term()
 }
 
 // handles brackets and numbers
-int factor()
+struct block* factor()
 {
-    int value;
+    struct block* value;
 
     if ( current_token == '(' ) {
         match( '(' );
@@ -172,6 +175,7 @@ int factor()
         return value;
     }
     else if ( current_token == NUM ) {
+        // TODO: Convert this here
         value = current_attribute;
         match( NUM );
         return value;
