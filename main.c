@@ -3,11 +3,16 @@
 #include <ctype.h>
 #include <string.h>
 
+// Fork of bounded memory calculator by Christino Tamon: https://github.com/ctamon/finite-calculator
+
 // constants
 #define EOS	257
 #define NUM	258
 
 // Block of 4 digits
+// Size 4 was chosen because:
+//     9999*9999 < 2^32
+//     99999*99999 > 2^32
 struct block {
     struct block* next;
     int val;
@@ -15,7 +20,6 @@ struct block {
 };
 
 struct block* create_block(int val, int exp);
-struct block* zero(int exp);
 
 // Linked list of blocks
 struct list {
@@ -193,6 +197,7 @@ void error( char *message )
     exit(1);
 }
 
+// Allocates a new block of digits
 struct block* create_block(int val, int exp) {
     struct block* new = (struct block*)malloc(sizeof(struct block));
     new->next = NULL;
@@ -201,10 +206,7 @@ struct block* create_block(int val, int exp) {
     return new;
 }
 
-struct block* zero(int exp) {
-    return create_block(0, exp);
-}
-
+// Append list item to prev node
 struct list* append(struct list* prev, struct block* block) {
     struct list* new = (struct list*)malloc(sizeof(struct list));
     new->next = NULL;
@@ -213,6 +215,8 @@ struct list* append(struct list* prev, struct block* block) {
     return new;
 }
 
+// Carry the value to block a
+// Effectively rounds blocks that are too large
 void carry(struct block** a, int value, int exp) {
     if(*a == NULL) {
         *a = create_block(value, exp);
@@ -230,9 +234,11 @@ void carry(struct block** a, int value, int exp) {
 
 // Add block b to a
 struct block* add(struct block** a, struct block* b) {
+    // If both are null then the sum is null
     if(*a == NULL && b == NULL)
         return NULL;
 
+    // if(a == 0 && b != 0): a + b = b
     if(*a == NULL)
         *a = b;
 
@@ -244,30 +250,39 @@ struct block* add(struct block** a, struct block* b) {
         // Add the next blocks
         add(&((*a)->next), b->next);
     }
+    // If b was null then return a anyway
     return *a;
 }
 
+// Multiply blocks a and b
 struct block* mult(struct block* a, struct block* b) {
     struct list *head = (struct list*)malloc(sizeof(struct list)), *next = head;
 
+    // Keep track of the members of a for each block in b
     struct block* a_start = a;
+    // Loop through the blocks in b
     while(b) {
         a = a_start;
+        // Loop throught the blocks in a
         while(a) {
+            // The exp of the resulting block will be the sum of the two blocks being multiplied
             int exp = a->exp + b->exp;
             // Multiply the blocks
             struct block* product = create_block(a->val * b->val, exp);
             // Expand upward with carrying
             carry(&product, 0, exp);
 
-            // Fill in zeros
+            // Fill in the zeros below the product
             struct block *prev = product, *current;
             for(; exp > 0; --exp) {
-                current = zero(exp - 1);
+                // Create a new block of zeros
+                current = create_block(0, exp - 1);
+                // Append the previous block chain to the zero block
                 current->next = prev;
                 prev = current;
             }
 
+            // Next is the list of all products to be summed
             next = append(next, prev);
 
             a = a->next;
@@ -285,6 +300,7 @@ struct block* mult(struct block* a, struct block* b) {
     return a;
 }
 
+// Converts a block into a c string
 char* block_str(struct block* a) {
     if(a == NULL)
         return '\0';
@@ -318,11 +334,14 @@ int p10(int e) {
     return result;
 }
 
+// string.h has a strrev() but it does not work on linux
+// This implementation is based on https://stackoverflow.com/questions/8534274/is-the-strrev-function-not-available-in-linux
 char* string_reverse(char* str) {
     char *p1, *p2;
 
     if (!str || !*str)
         return str;
+
     // Point p1 to the start and p2 to the end increment/decrement until the cross
     for(p1 = str, p2 = str + strlen(str) - 1; p2 > p1; ++p1, --p2) {
         // Swap the chars
