@@ -15,132 +15,24 @@ struct block {
     int exp;
 };
 
-struct block* create_block(int val, int exp) {
-    struct block* new = (struct block*)malloc(sizeof(struct block));
-    new->next = NULL;
-    new->val = val;
-    new->exp = exp;
-    return new;
-}
+struct block* create_block(int val, int exp);
+struct block* zero(int exp);
 
-struct block* zero(int exp) {
-    return create_block(0, exp);
-}
-
+// Linked list of blocks
 struct list {
     struct list* next;
     struct block* data;
 };
 
-struct list* append(struct list* prev, struct block* block) {
-    struct list* new = (struct list*)malloc(sizeof(struct list));
-    new->next = NULL;
-    new->data = block;
-    prev->next = new;
-    return new;
-}
+struct list* append(struct list* prev, struct block* block);
 
-void carry(struct block** a, int value, int exp) {
-    if(*a == NULL) {
-        *a = create_block(value, exp);
-        return;
-    }
-    value += (*a)->val;
-    (*a)->val = value;
-    // Recursive carry
-    if(value >= 10000) {
-        value /= 10000;
-        (*a)->val %= 10000;
-        carry(&((*a)->next), value, (*a)->exp+1);
-    }
-}
+void carry(struct block** a, int value, int exp);
+struct block* add(struct block** a, struct block* b);
+struct block* mult(struct block* a, struct block* b);
 
-// Add block b to a
-struct block* add(struct block** a, struct block* b) {
-    if(*a == NULL && b == NULL)
-        return NULL;
+char* block_str(struct block* a);
+int p10(int e);
 
-    if(*a == NULL)
-        *a = b;
-
-    else if(b != NULL) {
-        // If both have a block
-        (*a)->val += b->val;
-        // Carry nothing extra (handles if there's overflow)
-        carry(a, 0, (*a)->exp);
-        // Add the next blocks
-        add(&((*a)->next), b->next);
-    }
-    return *a;
-}
-
-struct block* mult(struct block* a, struct block* b) {
-    struct list *head = (struct list*)malloc(sizeof(struct list)), *next = head;
-
-    struct block* a_start = a;
-    // TODO: Works for one block but not for multiple
-    while(b) {
-        a = a_start;
-        while(a) {
-            int exp = a->exp + b->exp;
-            // Multiply the blocks
-            struct block* product = create_block(a->val * b->val, exp);
-            // Expand upward with carrying
-            carry(&product, 0, exp);
-
-            // Fill in zeros
-            struct block *prev = product, *current;
-            for(; exp > 0; --exp) {
-                current = zero(exp - 1);
-                current->next = prev;
-                prev = current;
-            }
-
-            next = append(next, prev);
-
-            a = a->next;
-        }
-        b = b->next;
-    }
-
-    // Sum the intermediate products
-    while(head = head->next) {
-        b = add(&(head->data), b);
-    }
-    a = b;
-    return a;
-}
-
-char* block_str(struct block* a) {
-    if(a == NULL)
-        return '\0';
-
-    int size = 8, i = 0;
-    char* buffer = (char*)malloc(size);
-    while(a) {
-        if(i >= size - 5) {
-            buffer = (char*)realloc(buffer, size = size * 2);
-        }
-        int j;
-        for(j = 0; j < 4; ++j) {
-            buffer[i++] = (a->val % 10) + '0';
-            a->val /= 10;
-        }
-        a = a->next;
-    }
-
-    buffer[i] = '\0';
-    strrev(buffer);
-
-    return buffer;
-}
-
-int p10(int e) {
-    int result = 1;
-    for(; e > 0; --e)
-        result *= 10;
-    return result;
-}
 
 // prototypes
 struct block* expr();
@@ -298,4 +190,126 @@ void error( char *message )
 {
     fprintf( stderr, "Error: %s\n", message );
     exit(1);
+}
+
+struct block* create_block(int val, int exp) {
+    struct block* new = (struct block*)malloc(sizeof(struct block));
+    new->next = NULL;
+    new->val = val;
+    new->exp = exp;
+    return new;
+}
+
+struct block* zero(int exp) {
+    return create_block(0, exp);
+}
+
+struct list* append(struct list* prev, struct block* block) {
+    struct list* new = (struct list*)malloc(sizeof(struct list));
+    new->next = NULL;
+    new->data = block;
+    prev->next = new;
+    return new;
+}
+
+void carry(struct block** a, int value, int exp) {
+    if(*a == NULL) {
+        *a = create_block(value, exp);
+        return;
+    }
+    value += (*a)->val;
+    (*a)->val = value;
+    // Recursive carry
+    if(value >= 10000) {
+        value /= 10000;
+        (*a)->val %= 10000;
+        carry(&((*a)->next), value, (*a)->exp+1);
+    }
+}
+
+// Add block b to a
+struct block* add(struct block** a, struct block* b) {
+    if(*a == NULL && b == NULL)
+        return NULL;
+
+    if(*a == NULL)
+        *a = b;
+
+    else if(b != NULL) {
+        // If both have a block
+        (*a)->val += b->val;
+        // Carry nothing extra (handles if there's overflow)
+        carry(a, 0, (*a)->exp);
+        // Add the next blocks
+        add(&((*a)->next), b->next);
+    }
+    return *a;
+}
+
+struct block* mult(struct block* a, struct block* b) {
+    struct list *head = (struct list*)malloc(sizeof(struct list)), *next = head;
+
+    struct block* a_start = a;
+    while(b) {
+        a = a_start;
+        while(a) {
+            int exp = a->exp + b->exp;
+            // Multiply the blocks
+            struct block* product = create_block(a->val * b->val, exp);
+            // Expand upward with carrying
+            carry(&product, 0, exp);
+
+            // Fill in zeros
+            struct block *prev = product, *current;
+            for(; exp > 0; --exp) {
+                current = zero(exp - 1);
+                current->next = prev;
+                prev = current;
+            }
+
+            next = append(next, prev);
+
+            a = a->next;
+        }
+        b = b->next;
+    }
+
+    // Sum the intermediate products
+    while(head = head->next) {
+        b = add(&(head->data), b);
+    }
+    a = b;
+    return a;
+}
+
+char* block_str(struct block* a) {
+    if(a == NULL)
+        return '\0';
+
+    int size = 8, i = 0;
+    char* buffer = (char*)malloc(size);
+    while(a) {
+        if(i >= size - 5) {
+            buffer = (char*)realloc(buffer, size = size * 2);
+        }
+        int j;
+        for(j = 0; j < 4; ++j) {
+            buffer[i++] = (a->val % 10) + '0';
+            a->val /= 10;
+        }
+        a = a->next;
+    }
+
+    buffer[i] = '\0';
+    strrev(buffer);
+
+    return buffer;
+}
+
+// Power of 10
+int p10(int e) {
+    int result = 1;
+    for(; e > 0; --e)
+        result *= 10;
+    return result;
 }
