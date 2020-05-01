@@ -38,6 +38,7 @@ Other than that visual quirk there are few functional limitations to this calcul
 
 - The calculator only supports natural numbers.
 - The calculator only supports two operations.
+- Unclear handling of unbalanced parentheses.
 
 ### Advantages
 
