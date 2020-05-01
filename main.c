@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -32,6 +31,7 @@ struct block* mult(struct block* a, struct block* b);
 
 char* block_str(struct block* a);
 int p10(int e);
+char *string_reverse(char *str);
 
 
 // prototypes
@@ -106,6 +106,7 @@ struct block* factor()
         return value;
     }
     else error( "Unexpected token in factor()" );
+    return NULL;
 }
 
 /* match expected token */
@@ -275,8 +276,10 @@ struct block* mult(struct block* a, struct block* b) {
     }
 
     // Sum the intermediate products
-    while(head = head->next) {
+    head = head->next;
+    while(head) {
         b = add(&(head->data), b);
+        head = head->next;
     }
     a = b;
     return a;
@@ -301,7 +304,8 @@ char* block_str(struct block* a) {
     }
 
     buffer[i] = '\0';
-    strrev(buffer);
+    //strrev(buffer); Does not work on linux
+    string_reverse(buffer);
 
     return buffer;
 }
@@ -312,4 +316,20 @@ int p10(int e) {
     for(; e > 0; --e)
         result *= 10;
     return result;
+}
+
+char* string_reverse(char* str) {
+    char *p1, *p2;
+
+    if (!str || !*str)
+        return str;
+    // Point p1 to the start and p2 to the end increment/decrement until the cross
+    for(p1 = str, p2 = str + strlen(str) - 1; p2 > p1; ++p1, --p2) {
+        // Swap the chars
+        *p1 ^= *p2;
+        *p2 ^= *p1;
+        *p1 ^= *p2;
+    }
+
+    return str;
 }
