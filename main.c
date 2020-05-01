@@ -46,6 +46,7 @@ void carry(struct block** a, int value, int exp) {
         return;
     }
     value += (*a)->val;
+    (*a)->val = value;
     // Recursive carry
     if(value >= 10000) {
         value /= 10000;
@@ -76,8 +77,10 @@ struct block* add(struct block** a, struct block* b) {
 struct block* mult(struct block* a, struct block* b) {
     struct list *head = (struct list*)malloc(sizeof(struct list)), *next = head;
 
+    struct block* a_start = a;
     // TODO: Works for one block but not for multiple
     while(b) {
+        a = a_start;
         while(a) {
             int exp = a->exp + b->exp;
             // Multiply the blocks
@@ -88,19 +91,18 @@ struct block* mult(struct block* a, struct block* b) {
             // Fill in zeros
             struct block *prev = product, *current;
             for(; exp > 0; --exp) {
-                current = zero(exp);
-                prev->next = current;
+                current = zero(exp - 1);
+                current->next = prev;
                 prev = current;
             }
 
-            append(next, product);
+            next = append(next, prev);
 
             a = a->next;
         }
         b = b->next;
     }
 
-    b = NULL;
     // Sum the intermediate products
     while(head = head->next) {
         b = add(&(head->data), b);
@@ -119,7 +121,8 @@ char* block_str(struct block* a) {
         if(i >= size - 5) {
             buffer = (char*)realloc(buffer, size = size * 2);
         }
-        for(int j = 0; j < 4; ++j) {
+        int j;
+        for(j = 0; j < 4; ++j) {
             buffer[i++] = (a->val % 10) + '0';
             a->val /= 10;
         }
@@ -261,15 +264,14 @@ int get_token()
                             if(i == 0) {
                                 // If the old block hasn't been flushed yet
                                 if(place == 0 && length != 0) {
-//                                    printf("%d\n", value);
-                                    next->next = create_block(value, ((length - i) / 4));
+                                    next->next = create_block(value, ((length - i - 1) / 4));
                                     next = next->next;
                                     value = 0;
                                 }
                                 value += buffer[i] * p10(place);
+                                length++;
                             }
-//                            printf("%d\n", value);
-                            next->next = create_block(value, ((length - i) / 4));
+                            next->next = create_block(value, ((length - i - 1) / 4));
                             next = next->next;
                             value = 0;
                         }
