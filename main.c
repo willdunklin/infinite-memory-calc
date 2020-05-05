@@ -51,16 +51,28 @@ void match( int );
 int current_token;
 struct block* current_attribute;
 
+FILE *ifp, *ofp;
+int done;
+
 /* unbounded memory calculator */
-int main()
+int main(int argc, char* argv[])
 {
+    ifp = fopen(argv[1], "r");
+    ofp = fopen(argv[2], "w");
     struct block* value;
 
-    current_token = get_token();
-    while ( current_token != EOS ) {
-        value = expr();
-        fprintf( stderr, "\nValue = %s\n", block_str(value) );
+    done = 0;
+
+    while(!done) {
+        current_token = get_token();
+        while (current_token != EOS) {
+            value = expr();
+            fprintf(ofp, "%s\n", block_str(value));
+        }
     }
+
+    fclose(ifp);
+    fclose(ofp);
 }
 
 // handles addition
@@ -136,15 +148,15 @@ int get_token()
     char* buffer = (char*)malloc(size);
 
     while (1) {
-        switch ( c = getchar() ) {
+        switch ( c = getc(ifp) ) {
             case '+': case '*': case '(': case ')':
                 return c;	// return operators and brackets as is
             case ' ': case '\t':
                 continue;	// ignore spaces and tabs
             default:
                 if ( isdigit(c) ) {
-                    ungetc(c, stdin);
-                    while ( isdigit( c = getchar() )) {
+                    ungetc(c, ifp);
+                    while ( isdigit( c = getc(ifp) )) {
                         if(i >= size - 1)
                             buffer = (char*)realloc(buffer, size = size * 2);
                         buffer[i++] = c - '0';
@@ -175,9 +187,13 @@ int get_token()
                         value += buffer[i] * p10(place);
                     }
 
-                    ungetc( c, stdin );
+                    ungetc( c, ifp );
                     current_attribute = head->next;
                     return NUM;
+                }
+                else if (c == -1 ) {
+                    done = 1;
+                    return EOS;
                 }
                 else if ( c == '\n' ) {
                     return EOS;
